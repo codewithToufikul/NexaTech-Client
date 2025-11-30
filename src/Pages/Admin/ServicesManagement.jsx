@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../../services/api';
 import { Plus, Edit, Trash2, Loader, AlertCircle, CheckCircle } from 'lucide-react';
-import ServiceForm from '../../components/admin/ServiceForm';
+import ServiceForm from '../../Components/admin/ServiceForm';
 
 const ServicesManagement = () => {
   const [services, setServices] = useState([]);

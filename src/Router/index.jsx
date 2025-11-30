@@ -13,7 +13,7 @@ import ServicesManagement from "../Pages/Admin/ServicesManagement";
 import PortfolioManagement from "../Pages/Admin/PortfolioManagement";
 import ContactsManagement from "../Pages/Admin/ContactsManagement";
 import Analytics from "../Pages/Admin/Analytics";
-import ProtectedRoute from "../components/ProtectedRoute";
+import ProtectedRoute from "../Components/ProtectedRoute";
 import NotFound from "../Pages/Error/NotFound";
 
 export const router = createBrowserRouter([

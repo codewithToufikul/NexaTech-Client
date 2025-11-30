@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../../services/api';
 import { Plus, Edit, Trash2, Loader, AlertCircle, CheckCircle } from 'lucide-react';
-import PortfolioForm from '../../components/admin/PortfolioForm';
+import PortfolioForm from '../../Components/admin/PortfolioForm';
 
 const PortfolioManagement = () => {
   const [portfolio, setPortfolio] = useState([]);
