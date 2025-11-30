@@ -1,85 +1,53 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, ArrowRight, Code, Smartphone, Network, Brain, Palette, Globe } from 'lucide-react';
+import { ExternalLink, ArrowRight, Code, Smartphone, Network, Brain, Palette, Globe, Ruler, Loader } from 'lucide-react';
+import { publicAPI } from '../../services/api';
+import { Link } from 'react-router-dom';
 
 const PortfolioSection = () => {
   const [visibleProjects, setVisibleProjects] = useState(new Set());
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const projects = [
-    {
-      id: 'ecommerce-platform',
-      title: 'E-Commerce Platform',
-      tagline: 'Next.js & React with AI recommendations',
-      category: 'Web Development',
-      image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=600&h=400&fit=crop',
-      color: 'blue',
-      icon: Globe
-    },
-    {
-      id: 'mobile-banking',
-      title: 'Mobile Banking App',
-      tagline: 'Secure fintech solution with biometrics',
-      category: 'Mobile App',
-      image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=600&h=400&fit=crop',
-      color: 'teal',
-      icon: Smartphone
-    },
-    {
-      id: 'network-dashboard',
-      title: 'Network Monitoring Dashboard',
-      tagline: 'Real-time infrastructure analytics',
-      category: 'Networking',
-      image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop',
-      color: 'yellow',
-      icon: Network
-    },
-    {
-      id: 'ai-chatbot',
-      title: 'AI Customer Support Bot',
-      tagline: 'NLP-powered intelligent assistance',
-      category: 'AI/ML',
-      image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=600&h=400&fit=crop',
-      color: 'blue',
-      icon: Brain
-    },
-    {
-      id: 'design-system',
-      title: 'Corporate Design System',
-      tagline: 'Scalable UI component library',
-      category: 'UI/UX Design',
-      image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=600&h=400&fit=crop',
-      color: 'teal',
-      icon: Palette
-    },
-    {
-      id: 'saas-platform',
-      title: 'SaaS Analytics Platform',
-      tagline: 'Data visualization & insights',
-      category: 'Web Development',
-      image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=400&fit=crop',
-      color: 'yellow',
-      icon: Code
-    },
-    {
-      id: 'iot-dashboard',
-      title: 'IoT Monitoring System',
-      tagline: 'Smart device management platform',
-      category: 'Networking',
-      image: 'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=600&h=400&fit=crop',
-      color: 'blue',
-      icon: Network
-    },
-    {
-      id: 'mobile-fitness',
-      title: 'Fitness Tracking App',
-      tagline: 'Health metrics with AI insights',
-      category: 'Mobile App',
-      image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&h=400&fit=crop',
-      color: 'teal',
-      icon: Smartphone
-    }
-  ];
+  // Icon mapping based on category
+  const getIconByCategory = (category) => {
+    const iconMap = {
+      'Web Development': Globe,
+      'Mobile App': Smartphone,
+      'Networking': Network,
+      'AI/ML': Brain,
+      'UI/UX Design': Palette,
+      'AutoCAD Engineering': Ruler,
+      'Other': Code,
+    };
+    return iconMap[category] || Code;
+  };
 
   useEffect(() => {
+    const fetchPortfolio = async () => {
+      try {
+        const response = await publicAPI.getPortfolio();
+        // Map portfolio items to include icon
+        const mappedProjects = (response.portfolio || []).slice(0, 8).map(item => ({
+          ...item,
+          icon: getIconByCategory(item.category),
+        }));
+        setProjects(mappedProjects);
+        // Initially show all projects
+        setVisibleProjects(new Set(mappedProjects.map(p => p.id)));
+        console.log('Portfolio loaded:', mappedProjects);
+      } catch (error) {
+        console.error('Failed to fetch portfolio:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPortfolio();
+  }, []);
+
+  useEffect(() => {
+    if (projects.length === 0) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -94,11 +62,14 @@ const PortfolioSection = () => {
       { threshold: 0.1, rootMargin: '50px' }
     );
 
-    const projects = document.querySelectorAll('[data-project-id]');
-    projects.forEach(project => observer.observe(project));
+    // Small delay to ensure DOM is updated
+    setTimeout(() => {
+      const projectElements = document.querySelectorAll('[data-project-id]');
+      projectElements.forEach(project => observer.observe(project));
+    }, 100);
 
     return () => observer.disconnect();
-  }, []);
+  }, [projects]);
 
   const getColorClasses = (color) => {
     const colorMap = {
@@ -149,23 +120,29 @@ const PortfolioSection = () => {
         </div>
 
         {/* Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-16">
-          {projects.map((project, index) => {
-            const Icon = project.icon;
-            const isVisible = visibleProjects.has(project.id);
-            const colors = getColorClasses(project.color);
-            
-            return (
-              <div
-                key={project.id}
-                data-project-id={project.id}
-                className={`group relative bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl overflow-hidden shadow-lg transition-all duration-700 transform hover:scale-105 hover:shadow-2xl ${
-                  isVisible 
-                    ? 'opacity-100 translate-y-0' 
-                    : 'opacity-0 translate-y-8'
-                }`}
-                style={{ transitionDelay: `${index * 100}ms` }}
-              >
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader className="w-8 h-8 text-blue-400 animate-spin" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-16">
+            {projects.length > 0 ? (
+              projects.map((project, index) => {
+                const Icon = project.icon;
+                const isVisible = visibleProjects.has(project.id) || visibleProjects.size === 0;
+                const colors = getColorClasses(project.color);
+                
+                return (
+                  <div
+                    key={project.id || index}
+                    data-project-id={project.id}
+                    className={`group relative bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl overflow-hidden shadow-lg transition-all duration-700 transform hover:scale-105 hover:shadow-2xl ${
+                      isVisible 
+                        ? 'opacity-100 translate-y-0' 
+                        : 'opacity-0 translate-y-8'
+                    }`}
+                    style={{ transitionDelay: `${index * 100}ms` }}
+                  >
                 {/* Project Image */}
                 <div className="relative h-48 overflow-hidden">
                   <img 
@@ -186,17 +163,21 @@ const PortfolioSection = () => {
                   </div>
                   
                   {/* Hover Content */}
-                  <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                     <h3 className="text-xl font-bold text-white mb-2">
                       {project.title}
                     </h3>
                     <p className="text-slate-200 text-sm mb-4">
                       {project.tagline}
                     </p>
-                    <button className={`inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r ${colors.button} text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:${colors.glow}`}>
+                    <Link
+                      to="/portfolio"
+                      state={{ projectId: project.id }}
+                      className={`inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r ${colors.button} text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg pointer-events-auto`}
+                    >
                       <span>View Details</span>
                       <ExternalLink className="w-4 h-4" />
-                    </button>
+                    </Link>
                   </div>
                 </div>
 
@@ -210,22 +191,28 @@ const PortfolioSection = () => {
                   </p>
                 </div>
 
-                {/* Hover Border Effect */}
-                <div className={`absolute inset-0 border-2 ${colors.border} rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+                    {/* Hover Border Effect */}
+                    <div className={`absolute inset-0 border-2 ${colors.border} rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="col-span-full text-center py-20">
+                <p className="text-slate-400 text-lg">No portfolio projects available yet.</p>
               </div>
-            );
-          })}
-        </div>
+            )}
+          </div>
+        )}
 
         {/* Bottom CTA */}
         <div className="text-center">
-          <button className="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 via-teal-600 to-yellow-600 hover:from-blue-500 hover:via-teal-500 hover:to-yellow-500 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/20">
+          <Link to="/portfolio" className="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 via-teal-600 to-yellow-600 hover:from-blue-500 hover:via-teal-500 hover:to-yellow-500 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/20 relative">
             <span className="text-lg">View Full Portfolio</span>
             <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
             
             {/* Button Glow */}
             <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-yellow-400 rounded-xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-          </button>
+          </Link>
           
           <p className="text-slate-500 text-sm mt-4">
             Ready to see what we can build for you?

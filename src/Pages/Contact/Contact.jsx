@@ -15,6 +15,7 @@ import {
   FileText,
   Sparkles
 } from 'lucide-react';
+import { publicAPI } from '../../services/api';
 
 const Contact = () => {
   const [visibleSections, setVisibleSections] = useState(new Set());
@@ -105,10 +106,8 @@ const Contact = () => {
     setIsSubmitting(true);
     setSubmitStatus(null);
     
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Form submitted:', formData);
-      setIsSubmitting(false);
+    try {
+      await publicAPI.submitContact(formData);
       setSubmitStatus('success');
       setFormData({
         name: '',
@@ -123,7 +122,18 @@ const Contact = () => {
       setTimeout(() => {
         setSubmitStatus(null);
       }, 5000);
-    }, 1500);
+    } catch (error) {
+      setSubmitStatus('error');
+      setFormErrors({ submit: error.message || 'Failed to submit form. Please try again.' });
+      
+      // Clear error message after 5 seconds
+      setTimeout(() => {
+        setSubmitStatus(null);
+        setFormErrors({});
+      }, 5000);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const contactMethods = [
@@ -319,6 +329,16 @@ const Contact = () => {
                     <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
                     <p className="text-green-400 text-sm">
                       Thank you! Your message has been sent. We'll get back to you soon.
+                    </p>
+                  </div>
+                )}
+
+                {/* Error Message */}
+                {submitStatus === 'error' && formErrors.submit && (
+                  <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                    <p className="text-red-400 text-sm">
+                      {formErrors.submit}
                     </p>
                   </div>
                 )}

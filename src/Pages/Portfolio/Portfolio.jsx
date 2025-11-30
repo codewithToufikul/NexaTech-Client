@@ -8,23 +8,68 @@ import {
   Brain, 
   Palette, 
   Globe,
+  Ruler,
   Filter,
   X,
   Check,
   TrendingUp,
   Users,
   Award,
-  Clock
+  Clock,
+  Loader
 } from 'lucide-react';
-import { portfolioData } from '../../data/portfolioData';
+import { publicAPI } from '../../services/api';
 
 const Portfolio = () => {
   const [visibleSections, setVisibleSections] = useState(new Set());
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedProject, setSelectedProject] = useState(null);
-  const [filteredProjects, setFilteredProjects] = useState(portfolioData);
+  const [projects, setProjects] = useState([]);
+  const [filteredProjects, setFilteredProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Icon mapping based on category
+  const getIconByCategory = (category) => {
+    const iconMap = {
+      'Web Development': Globe,
+      'Mobile App': Smartphone,
+      'Networking': Network,
+      'AI/ML': Brain,
+      'UI/UX Design': Palette,
+      'AutoCAD Engineering': Ruler,
+      'Other': Code,
+    };
+    return iconMap[category] || Code;
+  };
 
   useEffect(() => {
+    const fetchPortfolio = async () => {
+      try {
+        const response = await publicAPI.getPortfolio();
+        // Map portfolio items to include icon
+        const mappedProjects = (response.portfolio || []).map(item => ({
+          ...item,
+          icon: getIconByCategory(item.category),
+        }));
+        setProjects(mappedProjects);
+        setFilteredProjects(mappedProjects);
+        // Initially show all projects
+        const initialVisible = new Set(mappedProjects.map(p => `project-${p.id}`));
+        setVisibleSections(initialVisible);
+        console.log('Portfolio loaded:', mappedProjects);
+      } catch (error) {
+        console.error('Failed to fetch portfolio:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPortfolio();
+  }, []);
+
+  useEffect(() => {
+    if (filteredProjects.length === 0) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -39,29 +84,29 @@ const Portfolio = () => {
       { threshold: 0.1, rootMargin: '50px' }
     );
 
-    const sections = document.querySelectorAll('[data-section-id]');
-    sections.forEach(section => observer.observe(section));
+    // Small delay to ensure DOM is updated
+    setTimeout(() => {
+      const sections = document.querySelectorAll('[data-section-id]');
+      sections.forEach(section => observer.observe(section));
+    }, 100);
 
     return () => observer.disconnect();
-  }, []);
+  }, [filteredProjects]);
 
   useEffect(() => {
     if (selectedCategory === 'All') {
-      setFilteredProjects(portfolioData);
+      setFilteredProjects(projects);
     } else {
       setFilteredProjects(
-        portfolioData.filter(project => project.category === selectedCategory)
+        projects.filter(project => project.category === selectedCategory)
       );
     }
-  }, [selectedCategory]);
+  }, [selectedCategory, projects]);
 
+  // Get unique categories from projects
   const categories = [
     'All',
-    'Web Development',
-    'Mobile App',
-    'Networking',
-    'AI/ML',
-    'UI/UX Design'
+    ...new Set(projects.map(p => p.category).filter(Boolean))
   ];
 
   const stats = [
@@ -230,16 +275,20 @@ const Portfolio = () => {
             data-section-id="projects"
             className="transition-all duration-1000"
           >
-            {filteredProjects.length > 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader className="w-8 h-8 text-blue-400 animate-spin" />
+              </div>
+            ) : filteredProjects.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 {filteredProjects.map((project, index) => {
                   const Icon = project.icon;
-                  const isVisible = visibleSections.has(`project-${project.id}`);
+                  const isVisible = visibleSections.has(`project-${project.id}`) || visibleSections.size === 0;
                   const colors = getColorClasses(project.color);
                   
                   return (
                     <div
-                      key={project.id}
+                      key={project.id || index}
                       data-section-id={`project-${project.id}`}
                       onClick={() => handleProjectClick(project)}
                       className={`group relative bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl overflow-hidden shadow-lg transition-all duration-700 transform hover:scale-105 hover:shadow-2xl cursor-pointer ${
@@ -269,17 +318,23 @@ const Portfolio = () => {
                         </div>
                         
                         {/* Hover Content */}
-                        <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                           <h3 className="text-xl font-bold text-white mb-2">
                             {project.title}
                           </h3>
                           <p className="text-slate-200 text-sm mb-4">
                             {project.tagline}
                           </p>
-                          <div className={`inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r ${colors.button} text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105`}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleProjectClick(project);
+                            }}
+                            className={`inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r ${colors.button} text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 pointer-events-auto`}
+                          >
                             <span>View Details</span>
                             <ExternalLink className="w-4 h-4" />
-                          </div>
+                          </button>
                         </div>
                       </div>
 
@@ -339,7 +394,7 @@ const Portfolio = () => {
                 <div className="absolute bottom-4 left-4 right-4">
                   <div className={`inline-flex items-center gap-2 px-4 py-2 bg-slate-900/80 backdrop-blur-sm rounded-full border ${getColorClasses(selectedProject.color).border}`}>
                     {(() => {
-                      const Icon = selectedProject.icon;
+                      const Icon = selectedProject.icon || getIconByCategory(selectedProject.category);
                       return <Icon className={`w-4 h-4 ${getColorClasses(selectedProject.color).icon}`} />;
                     })()}
                     <span className="text-white text-sm font-medium">{selectedProject.category}</span>
@@ -429,6 +484,17 @@ const Portfolio = () => {
                   >
                     Close
                   </button>
+                  {selectedProject.liveLink && (
+                    <a
+                      href={selectedProject.liveLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`flex-1 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-lg transition-all duration-300 text-center flex items-center justify-center gap-2`}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      View Live Project
+                    </a>
+                  )}
                   <a
                     href="/contact"
                     className={`flex-1 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-lg transition-all duration-300 text-center`}
