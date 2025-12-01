@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://nexatech-server-78kb.onrender.com/api';
+const API_BASE_URL ='https://nexatech-server-78kb.onrender.com/api';
 
 // Helper function to get auth token
 const getAuthToken = () => {
